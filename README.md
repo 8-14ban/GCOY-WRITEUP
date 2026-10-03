@@ -35,6 +35,7 @@ python3 gcoy_writeup.py export --out report.html
 | --- | --- |
 | `new <标题> --cat web --pts 200 --event 赛事名` | 生成 Markdown 模板（题目描述/思路/步骤/FLAG/复盘） |
 | `done <ID> --flag flag{...}` | 写入 flag，状态置 solved，同步 index 与正文 |
+| `edit <ID> --title ... --cat ... --pts ... --event ...` | 修改元数据，同步 index 与 Markdown 正文 |
 | `list` | 全部题目一览表 |
 | `stats` | 按分类统计 solved 率与得分，给出薄弱分类建议 |
 | `export --out report.html` | 单文件 HTML 战报，折叠式阅读 |
