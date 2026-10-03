@@ -138,6 +138,39 @@ def cmd_done(args):
     print(f"[+] {args.wid} 标记 solved，flag 已写入")
 
 
+def cmd_edit(args):
+    hdir = home(args)
+    idx = load_index(hdir)
+    item = find_item(idx, args.wid)
+    if not item:
+        sys.exit(f"找不到 writeup {args.wid}")
+    changed = []
+    if args.title:
+        item["title"] = args.title
+        changed.append("title")
+    if args.cat:
+        item["cat"] = args.cat
+        changed.append("cat")
+    if args.pts is not None:
+        item["pts"] = args.pts
+        changed.append("pts")
+    if args.event:
+        item["event"] = args.event
+        changed.append("event")
+    if not changed:
+        sys.exit("未指定要改的字段（--title/--cat/--pts/--event）")
+    save_index(hdir, idx)
+    path = hdir / item["file"]
+    if path.exists():
+        text = path.read_text(encoding="utf-8")
+        text = re.sub(r"(?m)^# .*$", f"# {item['title']}", text, count=1)
+        text = re.sub(r"(\| 分类 \|).*", rf"\1 {item['cat']} |", text)
+        text = re.sub(r"(\| 分值 \|).*", rf"\1 {item['pts']} |", text)
+        text = re.sub(r"(\| 赛事 \|).*", rf"\1 {item['event']} |", text)
+        path.write_text(text, encoding="utf-8")
+    print(f"[+] {args.wid} 已更新字段：{', '.join(changed)}")
+
+
 def cmd_list(args):
     idx = load_index(home(args))
     if not idx["items"]:
@@ -253,11 +286,13 @@ def cmd_selftest(args):
     run("new", "ezywaf-bypass", "--cat", "web", "--pts", "200", "--event", "TestCTF")
     run("new", "rot-riddle", "--cat", "crypto", "--pts", "100")
     run("done", "0001", "--flag", "flag{t3st_0k}")
+    run("edit", "0002", "--pts", "150", "--event", "RealCTF")
     run("list")
     run("stats")
     run("export", "--out", os.path.join(tmp, "report.html"))
     idx = load_index(home(argparse.Namespace(root=tmp)))
     assert idx["seq"] == 2 and idx["items"][0]["status"] == "solved"
+    assert idx["items"][1]["pts"] == 150 and idx["items"][1]["event"] == "RealCTF"
     html = Path(tmp, "report.html").read_text(encoding="utf-8")
     assert "flag{t3st_0k}" in html
     md = (Path(tmp, "writeups", idx["items"][0]["file"])).read_text(encoding="utf-8")
@@ -279,6 +314,13 @@ def main(argv=None):
     s.add_argument("wid")
     s.add_argument("--flag", required=True)
     s.set_defaults(fn=cmd_done)
+    s = sub.add_parser("edit", help="修改 writeup 元数据")
+    s.add_argument("wid")
+    s.add_argument("--title", default=None)
+    s.add_argument("--cat", default=None, choices=CATS)
+    s.add_argument("--pts", type=int, default=None)
+    s.add_argument("--event", default=None)
+    s.set_defaults(fn=cmd_edit)
     s = sub.add_parser("list", help="列出全部")
     s.set_defaults(fn=cmd_list)
     s = sub.add_parser("stats", help="分类统计与薄弱项")
